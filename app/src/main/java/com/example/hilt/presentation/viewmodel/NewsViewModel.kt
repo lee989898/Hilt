@@ -7,18 +7,17 @@ import android.net.NetworkCapabilities
 import android.os.Build
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.hilt.data.model.APIResponse
 import com.example.hilt.data.util.Resource
-import com.example.hilt.domain.usecase.GetNewsHeadUseCase
+import com.example.hilt.domain.usecase.GetNewsHeadlinesUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.lang.Exception
 
 class NewsViewModel(
     private val app: Application,
-    val getNewsHeadUseCase: GetNewsHeadUseCase
+    val getNewsHeadlinesUseCase: GetNewsHeadlinesUseCase
 ) : AndroidViewModel(app) {
     val newsHeadLines: MutableLiveData<Resource<APIResponse>> = MutableLiveData()
 
@@ -26,7 +25,7 @@ class NewsViewModel(
         newsHeadLines.postValue(Resource.Loading())
         try {
             if (isNetworkAvailable(app)) {
-                val apiResult = getNewsHeadUseCase.execute(country, page)
+                val apiResult = getNewsHeadlinesUseCase.execute(country, page)
                 newsHeadLines.postValue(apiResult)
             } else {
                 newsHeadLines.postValue(Resource.Error("인터넷이 오류"))
