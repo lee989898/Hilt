@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AbsListView
+import android.widget.SearchView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
@@ -14,6 +15,9 @@ import com.example.hilt.data.util.Resource
 import com.example.hilt.databinding.FragmentNewsBinding
 import com.example.hilt.presentation.adapter.NewsAdapter
 import com.example.hilt.presentation.viewmodel.NewsViewModel
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 
 class NewsFragment : Fragment() {
@@ -52,6 +56,7 @@ class NewsFragment : Fragment() {
         }
         initRecyclerView()
         viewNewsList()
+        setSearchView()
     }
 
     private fun viewNewsList() {
@@ -62,10 +67,10 @@ class NewsFragment : Fragment() {
                     hideProgressBar()
                     response.data?.let {
                         newsAdapter.differ.submitList(it.articles.toList())
-                        if(it.totalResults%20 == 0){
-                            pages = it.totalResults/20
-                        }else{
-                            pages = it.totalResults/20+1
+                        if (it.totalResults % 20 == 0) {
+                            pages = it.totalResults / 20
+                        } else {
+                            pages = it.totalResults / 20 + 1
                         }
                         isLastPage = page == pages
                     }
@@ -102,10 +107,10 @@ class NewsFragment : Fragment() {
         fragmentNewsBinding.progressBar.visibility = View.GONE
     }
 
-    private val onScrollListener = object : RecyclerView.OnScrollListener(){
+    private val onScrollListener = object : RecyclerView.OnScrollListener() {
         override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
             super.onScrollStateChanged(recyclerView, newState)
-            if(newState == AbsListView.OnScrollListener.SCROLL_STATE_TOUCH_SCROLL){
+            if (newState == AbsListView.OnScrollListener.SCROLL_STATE_TOUCH_SCROLL) {
                 isScrolling = true
             }
         }
@@ -119,11 +124,69 @@ class NewsFragment : Fragment() {
 
             val hasReachedToEnd = topPosition + visibleItems >= sizeOfTheCurrentList
             val shouldPaginate = !isLoading && !isLastPage && hasReachedToEnd && isScrolling
-            if(shouldPaginate){
+            if (shouldPaginate) {
                 page++
                 viewModel.getNewsHeadLines(country, page)
                 isScrolling = false
             }
         }
     }
+
+    //search
+    private fun setSearchView() {
+        fragmentNewsBinding.svNews.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                viewModel.searchNews("us", query.toString(), page)
+                viewSearchedNews()
+                return false
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                MainScope().launch {
+                    delay(2000)
+                    viewModel.searchNews("us", newText.toString(), page)
+                    viewSearchedNews()
+                }
+                return false
+            }
+        })
+
+        fragmentNewsBinding.svNews.setOnCloseListener(object : SearchView.OnCloseListener{
+            override fun onClose(): Boolean {
+                initRecyclerView()
+                viewNewsList()
+                return false
+            }
+        })
+
+    }
+
+    fun viewSearchedNews() {
+        viewModel.searchedNews.observe(viewLifecycleOwner) { response ->
+            when (response) {
+                is Resource.Success -> {
+                    hideProgressBar()
+                    response.data?.let {
+                        newsAdapter.differ.submitList(it.articles.toList())
+                        if (it.totalResults % 20 == 0) {
+                            pages = it.totalResults / 20
+                        } else {
+                            pages = it.totalResults / 20 + 1
+                        }
+                        isLastPage = page == pages
+                    }
+                }
+                is Resource.Error -> {
+                    hideProgressBar()
+                    response.message?.let {
+                        Toast.makeText(activity, "An error occured : $it", Toast.LENGTH_LONG).show()
+                    }
+                }
+                is Resource.Loading -> {
+                    showProgressBar()
+                }
+            }
+        }
+    }
+
 }

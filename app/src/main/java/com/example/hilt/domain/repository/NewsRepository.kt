@@ -9,7 +9,7 @@ interface NewsRepository {
 
     // api
     suspend fun getNewsHeadlines(country: String, page: Int): Resource<APIResponse>
-    suspend fun getSearchedNews(searchQuery: String): Resource<APIResponse>
+    suspend fun getSearchedNews(country: String,searchQuery: String,page: Int): Resource<APIResponse>
 
     // local
     suspend fun saveNews(article: Article)
